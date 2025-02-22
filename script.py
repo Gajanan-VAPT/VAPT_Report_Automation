@@ -99,7 +99,7 @@ def create_table(doc,heading):
     for row in table.rows:
         for cell in row.cells:
             cell.width = Pt(150)
-    # Merge column 0 and column 1 to create space for "Affected Resource"
+# Merge column 0 and column 1 to create space for "Affected Resource"
     table.cell(0, 0).merge(table.cell(0, 1))  # Merge first row, columns 0 and 1
     table.cell(1, 0).merge(table.cell(1, 1))  # Merge second row, columns 0 and 1
     # Set headers and make bold
@@ -361,7 +361,6 @@ def append_data(doc, csv_row_no, data_to_append, predefined_keywords):
 def main():
     # Create a new document
     doc = Document()
-    grouped_vulnerabilities = {}  # Store vulnerabilities with affected resources
 
     # Add a title
     title = doc.add_heading('RNS DATA AUTOMATION', level=1)
@@ -375,32 +374,24 @@ def main():
     # Open the CSV file and read its contents
     with open(csv_file_path, 'r', encoding='utf-8', errors='ignore') as csv_file:
         csv_reader = csv.reader(csv_file)
-        next(csv_reader)  # Skip the header row
+        # Skip the header row if needed
+        next(csv_reader)
 
         for csv_row_no, csv_row_data in enumerate(csv_reader):
             # Generate auto-incrementing finding ID
             finding_id = f"ABCXYZ-{finding_id_counter}"
             finding_id_counter += 1  # Increment counter
 
-            # Get the vulnerability name
-            vulnerability_name = csv_row_data[7]
-
-            # Group affected resources by vulnerability name
-            if vulnerability_name in grouped_vulnerabilities:
-                grouped_vulnerabilities[vulnerability_name].add(f"{csv_row_data[4]}:{csv_row_data[6]}")
-            else:
-                grouped_vulnerabilities[vulnerability_name] = {f"{csv_row_data[4]}:{csv_row_data[6]}"}
-
-            # Prepare data to append
+            # Prepare data to append with module name from CSV data
             data_to_append = {
-                "name": vulnerability_name,
-                "finding_id": finding_id,
+                "name": csv_row_data[7],  # Vulnerability name
+                "finding_id": finding_id,  # Auto-incrementing ID
                 "description": csv_row_data[9].split('.')[0],
                 "cvs_score": csv_row_data[2],
                 "risk_rating": "",
                 "risk_factor": csv_row_data[18],
                 "remote_exploitability": "Yes",
-                "affected_resource": "\n".join(grouped_vulnerabilities[vulnerability_name]),  # Vertical format
+                "affected_resource": [],
                 "module_name": "",  # Placeholder, this will be set dynamically
                 "security_risk": "",
                 "business_impact": "",
@@ -410,10 +401,10 @@ def main():
                 "proof_of_concept": "",
             }
 
-            # Create table for each vulnerability entry
+            # Create table for each row
             create_table(doc, data_to_append['name'])
             doc.add_section(WD_SECTION.NEW_PAGE)
-            append_data(doc, csv_row_no, data_to_append, KEYWORDS)        
+            append_data(doc, csv_row_no, data_to_append, KEYWORDS)
 
     # Save the document
     doc.save('output_document.docx')
