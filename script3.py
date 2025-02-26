@@ -35,7 +35,9 @@ def make_cell_text_bold(cell):
 
 def format_affected_resources(table, affected_resources):
     """
-    Format affected resources in a two-column layout with proper alignment
+    Format affected resources with conditional layout:
+    - If fewer than 5 resources: display in a single vertical column
+    - If 5 or more resources: display in a two-column layout
     
     Args:
         table: The document table to modify
@@ -46,33 +48,73 @@ def format_affected_resources(table, affected_resources):
     
     # Sort the resources for consistent display
     resources = sorted(affected_resources)
-    
-    # Calculate number of rows needed (ceiling division)
     total = len(resources)
-    rows = (total + 1) // 2  # This ensures we round up
     
-    # Create paragraph for each row
-    for i in range(rows):
-        paragraph = cell.add_paragraph()
+    # Clear all existing paragraphs in the cell except the first one
+    for p in cell.paragraphs[1:]:
+        p._element.getparent().remove(p._element)
+    
+    # Get the first paragraph
+    first_paragraph = cell.paragraphs[0]
+    first_paragraph.text = ""  # Ensure it's empty
+    
+    # For fewer than 5 resources: vertical layout (single column)
+    if total <= 5:
+        # Add first resource to the existing paragraph
+        if resources:
+            run = first_paragraph.add_run(resources[0])
+            run.font.size = Pt(10)
         
-        # Add left column
-        if i < len(resources):
+        # Add remaining resources in separate paragraphs
+        for i in range(1, total):
+            paragraph = cell.add_paragraph()
             run = paragraph.add_run(resources[i])
-            run.font.size = Pt(10)  # Set consistent font size
+            run.font.size = Pt(10)
             
-            # Add spacing between columns (using spaces for alignment)
-            # Calculate padding to align second column
-            padding = 35 - len(resources[i])  # Adjust 35 based on your needs
-            run = paragraph.add_run(" " * padding)
+            # Set paragraph spacing
+            paragraph.space_after = Pt(0)
+            paragraph.space_before = Pt(0)
+    
+    # For 5 or more resources: two-column layout
+    else:
+        # Calculate number of rows needed (ceiling division)
+        rows = (total + 1) // 2  # This ensures we round up
+        
+        # Add first row to existing paragraph
+        if resources:
+            run = first_paragraph.add_run(resources[0])
+            run.font.size = Pt(10)
+            padding = 35 - len(resources[0])  # Adjust 35 based on your needs
+            run = first_paragraph.add_run(" " * padding)
             
-            # Add right column if it exists
-            if i + rows < len(resources):
-                run = paragraph.add_run(resources[i + rows])
+            # Add right column for first row if it exists
+            if rows < len(resources):
+                run = first_paragraph.add_run(resources[rows])
                 run.font.size = Pt(10)
         
         # Set paragraph spacing
-        paragraph.space_after = Pt(0)  # Reduce space between rows
-        paragraph.space_before = Pt(0)
+        first_paragraph.space_after = Pt(0)
+        first_paragraph.space_before = Pt(0)
+        
+        # Create paragraph for each remaining row (starting from index 1)
+        for i in range(1, rows):
+            paragraph = cell.add_paragraph()
+            
+            # Add left column
+            if i < len(resources):
+                run = paragraph.add_run(resources[i])
+                run.font.size = Pt(10)  
+                padding = 35 - len(resources[i])  # Adjust based on your needs
+                run = paragraph.add_run(" " * padding)
+                
+                # Add right column if it exists
+                if i + rows < len(resources):
+                    run = paragraph.add_run(resources[i + rows])
+                    run.font.size = Pt(10)
+            
+            # Set paragraph spacing
+            paragraph.space_after = Pt(0)
+            paragraph.space_before = Pt(0)
 
 def create_table(doc, heading):
     paragraph = doc.add_paragraph()
